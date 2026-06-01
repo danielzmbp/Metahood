@@ -23,7 +23,7 @@ default_values = {
     "mag":["native"],
     "threads":8,
     "assembly":    {"assembler": "megahit","groups": {},"parameters":"" },
-    "annotation": {'diamond':dict(),"ip_db":"","cat_db":"","cat_path":"","kraken_db":"","kofamscan":{"profiles":"","ko_list":""},"virsorter":"","plasmidnet_install":"","genomad_db":""},
+    "annotation": {'diamond':dict(),"checkm":"","ip_db":"","cat_db":"","cat_path":"","kraken_db":"","kofamscan":{"profiles":"","ko_list":""},"virsorter":"","plasmidnet_install":"","genomad_db":""},
     "graph":{"List_graphs":{}},
     "filtering":"",
     "Percent_memory":0.5,
@@ -65,6 +65,34 @@ def fill_default_values(config):
         default_values["gtdb"] = os.path.join(local_dir, "gtdb")
     setdefault_recursively(config)
 
+def as_list(value):
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return [value]
+
+def expand_path(path):
+    return os.path.abspath(os.path.realpath(os.path.expanduser(path)))
+
+def expand_path_list(value):
+    return [expand_path(path) for path in as_list(value)]
+
+def get_slurm_partitions(config):
+    partitions = []
+    for key, specs in config.get("slurm_partitions", {}).items():
+        if not key:
+            continue
+        partitions.append([
+            specs["name"],
+            1000 * int(specs["min_mem"]),
+            1000 * int(specs["max_mem"]),
+            int(specs["min_threads"]),
+            int(specs["max_threads"]),
+        ])
+    return partitions or [["", 0, 0, 0, 0]]
+
+def has_slurm_partitions(config):
+    return any(key for key in config.get("slurm_partitions", {}))
+
 def sample_name(fullname):
     return os.path.splitext(os.path.basename(fullname))[0]
 
@@ -101,6 +129,12 @@ def replace_extensions(sample,FILTER):
         return sample.replace(ext,"_trimmed%s"%ext)
     else :
         return sample
+
+def get_fastp_json(fastq_file, filter_db):
+    if filter_db:
+        fastq_file = os.path.join(dirname(fastq_file), "Filtered_" + basename(fastq_file))
+    json_name = basename(fastq_file)[::-1].replace("1R", "", 1)[::-1] + "_fastp.json"
+    return os.path.join(dirname(fastq_file), json_name)
 
 def samples_yaml():
     libs = []
@@ -152,7 +186,7 @@ def get_resource_real(wildcards, input, threads, attempt, SLURM_PARTITIONS="", m
     mem = max((input.size//1000000) * attempt * mult, attempt*min_size* mult) # this is mb
 
     # handle case where we are not on a cluster, no partition is defined
-    if SLURM_PARTITIONS[0][0]=="":
+    if not SLURM_PARTITIONS or SLURM_PARTITIONS[0][0]=="":
         partition = ""
         return return_result(mem,partition,threads,mode)
 

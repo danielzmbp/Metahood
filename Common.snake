@@ -10,7 +10,7 @@ from psutil import virtual_memory
 from subprocess import Popen, PIPE
 from snakemake.exceptions import WorkflowError
 from os.path import basename,dirname,abspath,realpath, getsize, isdir
-from scripts.common import detect_reads, fill_default_values, extended_glob, replace_extensions, get_extension, get_resource_real,default_values
+from scripts.common import detect_reads, fill_default_values, extended_glob, replace_extensions, get_extension, get_fastp_json, get_resource_real, default_values, expand_path, expand_path_list, get_slurm_partitions
 
 #--------------------------- Config parameters ---------------------------
 # config_file = "/hpc-home/raguidea/seb/Projects/Myxomag/SR_ASM/fractionated/configs/config_frac_14.yaml"
@@ -32,10 +32,10 @@ METAHOOD=dirname(abspath(realpath(workflow.snakefile)))
 SETUP = 0
 
 # --------- Sample filtering ----------
-FILTER = config["filtering"]
+FILTER = expand_path(config["filtering"]) if config["filtering"] else ""
 
 # -------- Assembly --------
-IN = config["data"]
+IN = expand_path_list(config["data"])
 IGNORE_FOLDER = config["IGNORE_FOLDER"]+default_values["IGNORE_FOLDER"]
 IGNORE_FOLDER = [basename(folder) if isdir(realpath(folder)) else folder for folder_regex in  IGNORE_FOLDER for path in IN for folder in extended_glob(path+"/"+folder_regex)]
 # print("\n".join(IGNORE_FOLDER))
@@ -54,7 +54,7 @@ NB_CONCURENT_MAP = config["nb_concurent_map"]
 
 # ------- Cluster resources -------
 # config should be in G, but this will be compared with info in mb
-SLURM_PARTITIONS = [[specs["name"],1000*int(specs["min_mem"]),1000*int(specs["max_mem"]),int(specs["min_threads"]),int(specs["max_threads"])] for _,specs in config["slurm_partitions"].items() if _]
+SLURM_PARTITIONS = get_slurm_partitions(config)
 
 # megahit wants a percent of max mem, so there is a need for calculations
 MAX_MEM_PERCENT = {"":config["Percent_memory"]}
@@ -275,7 +275,5 @@ def get_percent_megahit(group,threads):
     
     partition, min_memory, max_memory, min_threads ,max_threads = next(el for el in SLURM_PARTITIONS if el[0]==partition)
     return mem/max_memory
-
-
 
 

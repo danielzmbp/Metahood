@@ -10,7 +10,7 @@ from psutil import virtual_memory
 from subprocess import Popen, PIPE
 from snakemake.exceptions import WorkflowError
 from os.path import basename,dirname,abspath,realpath, getsize
-from scripts.common import detect_reads, fill_default_values, extended_glob, replace_extensions, get_extension, get_resource_real
+from scripts.common import detect_reads, fill_default_values, extended_glob, replace_extensions, get_extension, get_resource_real, get_slurm_partitions
 
 # taken from enrichm 
 # https://github.com/geronimp/enrichM/blob/master/enrichm/genome.py
@@ -26,7 +26,7 @@ config2 = yaml.full_load(open(CONFIG_PATH))
 
 # ------- Cluster resources -------
 # config should be in G, but this will be compared with info in mb
-SLURM_PARTITIONS = [[specs["name"],1000*int(specs["min_mem"]),1000*int(specs["max_mem"]),int(specs["min_threads"]),int(specs["max_threads"])] for _,specs in config2["slurm_partitions"].items() if _]
+SLURM_PARTITIONS = get_slurm_partitions(config2)
 
 # need to create a partial function because rules takes a function
 def get_resource(mode, **kwargs):
@@ -210,7 +210,6 @@ def generate_orf_annotation(file):
                     continue
         orf_to_ann[orf]=real_acc
     return orf_to_ann
-
 
 
 

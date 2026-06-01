@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from os.path import abspath, realpath, dirname, basename, exists
-from scripts.common import fill_default_values, cd 
+from os.path import abspath, realpath, dirname, basename, exists, expanduser
+from scripts.common import fill_default_values, cd, has_slurm_partitions
 from subprocess import PIPE,Popen
 from psutil import virtual_memory
 import subprocess
@@ -26,7 +26,7 @@ parser.add_argument('-s', nargs=argparse.REMAINDER,help="Pass additional argumen
 args = parser.parse_args()
 
 # get config file
-CONFIG_FILE = abspath(realpath(args.config))
+CONFIG_FILE = abspath(realpath(expanduser(args.config)))
 config = yaml.full_load(open(CONFIG_FILE))
 
 # get exec directory
@@ -36,7 +36,7 @@ METAHOOD_DIR = dirname(abspath(realpath(sys.argv[0])))
 IS_WRITABLE = os.access(METAHOOD_DIR, os.W_OK)
 
 # execution directory
-EXEC_DIR=abspath(realpath(config["execution_directory"]))
+EXEC_DIR=abspath(realpath(expanduser(config["execution_directory"])))
 os.system("mkdir -p %s"%EXEC_DIR)
 
 # ------- set max memory used, in Go ---------------
@@ -52,7 +52,7 @@ NB_MAP = config["nb_map"]
 
 # ------- base parameters used to call snakemake -----------
 base_params = ["snakemake", "--directory", EXEC_DIR,"-k", "--config", "LOCAL_DIR=%s"%METAHOOD_DIR,"CONFIG_PATH=%s"%CONFIG_FILE,"EXEC_DIR=%s"%EXEC_DIR,"--configfile="+CONFIG_FILE,"--resources",'memG=%s'%MEMG,'nb_map=%s'%NB_MAP, "--latency-wait", "120"]
-if "" not in config["slurm_partitions"]:
+if not has_slurm_partitions(config):
     base_params+=["--cores", str(args.cores)]
 
 
@@ -103,5 +103,4 @@ with cd(METAHOOD_DIR):
     # call_snake(["--snakefile", "Maganalysis.snake"])    
     # launch desman
     # call_snake(["--snakefile", "Desman.snake"])
-
 
