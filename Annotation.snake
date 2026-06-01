@@ -1,6 +1,9 @@
 # in order to allow for multiple annotation process to coexist and produce similar names output, we just define rules priority
 # if parse_cogs_annotation does not work, it tries annotation_diamond
-ruleorder:  koannotation > parse_cogs_annotation  > IP_best_hit >annotation_diamond
+if KO_HMM:
+    ruleorder: koannotation_combine > parse_cogs_annotation > IP_best_hit > annotation_diamond
+else:
+    ruleorder: parse_cogs_annotation > IP_best_hit > annotation_diamond
  
 # ---- prodigal annotation on splits ----------------------------------------------------------------
 rule prodigal:
@@ -58,19 +61,38 @@ rule annotation_diamond:
 
 
 # ---- KO annotation taken from enrichm  --------------------
-rule koannotation:
-    input :  expand("{{path}}/temp_splits/Batch_{nb}.faa",nb=range(100))
-    output : out = "{path}/contigs_KEGG_best_hits.tsv"
-    params: root = realpath("{path}")
-    conda: "%s/ko_annotation.yaml"%CONDA_ENV
-    threads: 32
-    resources:
-        slurm_partition = get_resource("partition"),
-        mem_mb = get_resource("mem")
-    shell: """
-    snakemake -s {LOCAL_DIR}/ko_annotation.snake -k --rerun-incomplete --directory {params.root} --cores {threads} --nolock --config scripts={SCRIPTS} ROOT={params.root} KO_HMM={KO_HMM} KO_HMM_CUTOFFS={KO_HMM_CUTOFFS} CONFIG_PATH={CONFIG_PATH}
-    rm -rf {params.root}/.snakemake
-    """
+if KO_HMM:
+    rule koannotation_hmmsearch:
+        input: "{path}/annotation/temp_splits/Batch_{nb}.faa"
+        output: temp("{path}/annotation/temp_splits/Batch_{nb}_ko.out")
+        threads: 1
+        resources:
+            slurm_partition = get_resource("partition"),
+            mem_mb = get_resource("mem")
+        singularity: "docker://quay.io/annacprice/gtdbtk:1.4.0"
+        shell: """
+        if [ -s {input} ]
+        then
+            hmmsearch --cpu {threads} -o /dev/null --noali --domtblout {output} {KO_HMM} {input}
+        fi
+        touch {output}
+        """
+
+    rule koannotation_parse:
+        input: "{path}/annotation/temp_splits/Batch_{nb}_ko.out"
+        output: temp("{path}/annotation/temp_splits/Batch_{nb}_ko.tsv")
+        resources:
+            slurm_partition = get_resource("partition"),
+            mem_mb = get_resource("mem")
+        shell: "{SCRIPTS}/kofamscan_helper.py parse --hmmsearch {input} --cutoffs {KO_HMM_CUTOFFS} --out {output}"
+
+    rule koannotation_combine:
+        input: expand("{{path}}/annotation/temp_splits/Batch_{nb}_ko.tsv", nb=range(100))
+        output: "{path}/contigs_KEGG_best_hits.tsv"
+        resources:
+            slurm_partition = get_resource("partition"),
+            mem_mb = get_resource("mem")
+        shell: "{SCRIPTS}/kofamscan_helper.py combine --inputs {input} --cutoffs {KO_HMM_CUTOFFS} --out {output}"
 
 # ---- plasmid annotation  --------------------
 rule plasmidnet:
@@ -112,52 +134,51 @@ rule virsorter2:
 # ------ taxonomic annotation  --------------------
 if CAT_DB:
     CAT_DB_DMND = glob.glob("%s/db/*.dmnd"%CAT_DB)[0] # for size purpose
-else:
-    CAT_DB_DMND =""
 
-rule CAT_annotation:
-    input: contigs="{path}/annotation/temp_splits/Batch_{nb}",
-           faa="{path}/annotation/temp_splits/Batch_{nb}.faa",
-           db = CAT_DB_DMND
-    output: ORF2LCA="{path}/annotation/temp_splits/Batch_{nb}_contigs.contig2classification.txt",
-            diamond = temp("{path}/annotation/temp_splits/Batch_{nb}_contigs.alignment.diamond")
-    params : Dir="{path}/annotation/temp_splits/Batch_{nb}_contigs"
-    threads: 8
-    resources:
-        slurm_partition = get_resource("partition",mult=1),
-        mem_mb = get_resource("mem",mult=1)
-    shell : """
-    {CAT_PATH}/CAT_pack contigs -c {input.contigs}  -d {CAT_DB}/db -t {CAT_DB}/tax -p {input.faa} -n {threads} --out_prefix {params.Dir} --top 11 --I_know_what_Im_doing --force
-    """
+    rule CAT_annotation:
+        input: contigs="{path}/annotation/temp_splits/Batch_{nb}",
+               faa="{path}/annotation/temp_splits/Batch_{nb}.faa",
+               db = CAT_DB_DMND
+        output: ORF2LCA="{path}/annotation/temp_splits/Batch_{nb}_contigs.contig2classification.txt",
+                diamond = temp("{path}/annotation/temp_splits/Batch_{nb}_contigs.alignment.diamond")
+        params : Dir="{path}/annotation/temp_splits/Batch_{nb}_contigs"
+        threads: 8
+        resources:
+            slurm_partition = get_resource("partition",mult=1),
+            mem_mb = get_resource("mem",mult=1)
+        shell : """
+        {CAT_PATH}/CAT_pack contigs -c {input.contigs}  -d {CAT_DB}/db -t {CAT_DB}/tax -p {input.faa} -n {threads} --out_prefix {params.Dir} --top 11 --I_know_what_Im_doing --force
+        """
 
-rule CAT_add_name:
-    input: expand("{{path}}/annotation/temp_splits/Batch_{nb}_contigs.contig2classification.txt",nb=range(100))
-    output: annotation="{path}/annotation/CAT_contigs_taxonomy.tsv"
-    params: tmp="{path}/annotation/CAT_contig_raw.tsv"
-    resources:
-        slurm_partition = get_resource("partition"),
-        mem_mb = get_resource("mem")
-    shell: """cat {input} > {params.tmp}
-    {CAT_PATH}/CAT_pack add_names -i {params.tmp} -o {output.annotation} -t {CAT_DB}/tax
-    rm {params.tmp}
-    """
+    rule CAT_add_name:
+        input: expand("{{path}}/annotation/temp_splits/Batch_{nb}_contigs.contig2classification.txt",nb=range(100))
+        output: annotation="{path}/annotation/CAT_contigs_taxonomy.tsv"
+        params: tmp="{path}/annotation/CAT_contig_raw.tsv"
+        resources:
+            slurm_partition = get_resource("partition"),
+            mem_mb = get_resource("mem")
+        shell: """cat {input} > {params.tmp}
+        {CAT_PATH}/CAT_pack add_names -i {params.tmp} -o {output.annotation} -t {CAT_DB}/tax
+        rm {params.tmp}
+        """
 
 
 # ------- kraken annotation -----------------------
-rule kraken_uniq:
-    input: fa = "{group}/contigs/contigs.fa",
-           db = "%s"%KRAKEN_DB
-    output: report = "{group}/annotation/kraken_taxonomy_report.tsv",
-            classif = "{group}/annotation/kraken_contig_taxonomy.tsv"
-    conda : CONDA_ENV + "/kraken.yaml"
-    singularity: "docker://quay.io/annacprice/krakenuniq:0.5.8"
-    threads: 20
-    resources:
-        slurm_partition = get_resource("partition"),
-        mem_mb = get_resource("mem")
-    shell : """
-    krakenuniq --db {input.db} --preload --fasta-input {input.fa} --threads {threads} --report-file {output.report} > {output.classif}
-    """
+if KRAKEN_DB:
+    rule kraken_uniq:
+        input: fa = "{group}/contigs/contigs.fa",
+               db = "%s"%KRAKEN_DB
+        output: report = "{group}/annotation/kraken_taxonomy_report.tsv",
+                classif = "{group}/annotation/kraken_contig_taxonomy.tsv"
+        conda : CONDA_ENV + "/kraken.yaml"
+        singularity: "docker://quay.io/annacprice/krakenuniq:0.5.8"
+        threads: 20
+        resources:
+            slurm_partition = get_resource("partition"),
+            mem_mb = get_resource("mem")
+        shell : """
+        krakenuniq --db {input.db} --preload --fasta-input {input.fa} --threads {threads} --report-file {output.report} > {output.classif}
+        """
 
 
 # ------------------------------------------ COG Annotation -------------------------------
@@ -262,35 +283,38 @@ rule IP_best_hit:
             orfs_done = set()
             for file in input["tsv"]:
                 hits = []
-                orf_prev = next(open(file)).split("\t")[0]
                 for line in open(file):
                     sline = line.rstrip().split("\t")
                     if sline[8]=="-":
                         continue
                     orf = sline[0]
                     assert (orf not in orfs_done), f"issue with orf {orf}"
-                    if orf_prev!=orf:
+                    if hits and hits[0].split("\t")[0]!=orf:
                         if hits!=[]:
                             best_hit = reorder_annotation(min(hits,key=lambda x:float(x.rstrip().split("\t")[8])))
                             handle.write(f"{best_hit}")
+                            orfs_done.add(hits[0].split("\t")[0])
                         hits = [line]
-                        orfs_done.add(orf_prev)
-                        orf_prev = orf
                     else:
                         hits.append(line)
+                if hits!=[]:
+                    best_hit = reorder_annotation(min(hits,key=lambda x:float(x.rstrip().split("\t")[8])))
+                    handle.write(f"{best_hit}")
+                    orfs_done.add(hits[0].split("\t")[0])
 
 
 
 
 # ------------- genomad ------------
-rule genomad:
-    input: contigs = "{group}/contigs/contigs.fa", 
-           DB = f"{GENOMAD_DB}"
-    output: "{group}/annotation/genomad/genomad.done"
-    threads: 25
-    resources:
-        slurm_partition = get_resource("partition",mult=4),
-        mem_mb = get_resource("mem",mult=4)
-    params: output = "{group}/annotation/genomad"
-    singularity: "docker://quay.io/biocontainers/genomad:1.8.0--pyhdfd78af_0"
-    shell: """genomad end-to-end --cleanup --splits {threads} {input.contigs} {params.output} {GENOMAD_DB}&& touch {output}"""
+if GENOMAD_DB:
+    rule genomad:
+        input: contigs = "{group}/contigs/contigs.fa",
+               DB = f"{GENOMAD_DB}"
+        output: "{group}/annotation/genomad/genomad.done"
+        threads: 25
+        resources:
+            slurm_partition = get_resource("partition",mult=4),
+            mem_mb = get_resource("mem",mult=4)
+        params: output = "{group}/annotation/genomad"
+        singularity: "docker://quay.io/biocontainers/genomad:1.8.0--pyhdfd78af_0"
+        shell: """genomad end-to-end --cleanup --splits {threads} {input.contigs} {params.output} {GENOMAD_DB}&& touch {output}"""

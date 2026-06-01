@@ -9,36 +9,14 @@ import sys
 
 version = "%s.%s"%sys.version_info[:2]
 
-def Best_solution_yet(Coverage_profile,Indexed_coverage_profile,Set_genes) :
-    # save line number of each contig with marshal and using linecache, pretty sure this is not optimal yet, because it does not exploit the ordered part of the list of line.
-    try :
-        Dico_gene_index=marshal.load(open(Indexed_coverage_profile,"rb"))
-        # TOFIX : sometimes encoding shenanigans : python 3.5, will need the .decode(),  seems like all string loaded are binary. So the dictionary throw key error since the genes from Set_genes are not binary string... So there is a need to decode binary to utf-8
-        # TOFIX : sometimes encoding shenanigans : on python 3.7,  the .decode() make it fail.
-        #  3.7.6 on hmem2, env metahood2, fail without decode
-        # but also 3.7.6 on hmem3 env metahood2 fail with decode.... what should I do?
-        # new way of handling, by default try decode, if it fail don't use it
-        try :
-            Dico_gene_index={key.decode():values for key,values in Dico_gene_index.items()}
-        except:
-            Dico_gene_index={key:values for key,values in Dico_gene_index.items()}
-        # +2 is because linecache start at 1 (fucking assholes ) and because I got a line of headers.
-        Sorted_index=sorted([Dico_gene_index[gene]+2 for gene in Set_genes])
-        Nb_genes=len(Sorted_index)
-        List_reduced=[getline(Coverage_profile, line_nb) for line_nb in Sorted_index]
-        Dico_gene_profile={line.rstrip().split('\t')[0]:line for line in List_reduced}
-    except:
-        Handle=open(Coverage_profile)
-        Header=next(Handle)
-        Dico_gene_index={}
-        Dico_gene_profile={}
-        for index,line in enumerate(Handle) :
-            gene=line.split("\t")[0]
-            Dico_gene_index[gene]=index
-            if gene in Set_genes : 
-                Dico_gene_profile[gene]=line
-        marshal.dump(Dico_gene_index, open(Indexed_coverage_profile, "wb" ) )
-    Reduced_Dico_gene_profile={key:np.array(Dico_gene_profile[key].rstrip().split('\t')[1:]).astype(float) for key in Set_genes}
+def Best_solution_yet(Coverage_profile, Indexed_coverage_profile, Set_genes):
+    Reduced_Dico_gene_profile = {}
+    with open(Coverage_profile) as handle:
+        next(handle)  # Skip header
+        for line in handle:
+            gene = line.split("\t", 1)[0]
+            if gene in Set_genes:
+                Reduced_Dico_gene_profile[gene] = np.array(line.rstrip().split('\t')[1:]).astype(float)
     return Reduced_Dico_gene_profile
 
 def main(Annotation_file,Coverage_profile,output):
