@@ -67,36 +67,6 @@ rule graph_annotation:
 		Handle.close()
 		shell("{SCRIPTS}/Generate_Graph_metadata.py {input.gfa} {output.colors} {output.graph_annotation}")
 
-# rule gfa_to_fasta:
-# 	input: gfa="{name}_contiguous.gfa"
-# 	output: contigs="{name}_contigs.fa"
-# 	run :
-# 		Handle=open(output["contigs"],"w")
-# 		for line in open(input["gfa"]) :
-# 			if line[0]=="S" :
-# 				Splitline=line.split("\t")
-# 				Handle.write(">"+Splitline[1]+"\n"+Splitline[2]+"\n")
-# 		Handle.close()
-
-# rule CAT_graph_annotation:
-# 	input: contigs="{group}/graph/{name}_contigs.fa"
-# 	output: ORF2LCA="{group}/graph/CAT/{name}.ORF2LCA.txt"
-# 	params : Dir="{group}/graph/CAT/{name}"
-# 	threads: 1000
-# 	shell : """
-# 	CAT contigs -c {input.contigs}  -d {CAT_DB} -t {CAT_DB} -n {threads} --out_prefix {params.Dir} --top 11 --I_know_what_Im_doing --force
-# 	"""
-
-# rule CAT_ORF_graph_annotation:
-# 	input: ORF2LCA="{group}/graph/CAT/{name}.ORF2LCA.txt"
-# 	output: annotation="{group}/graph/{name}.cat",
-# 			done=touch("{group}/graph/{name}.taxadone")
-# 	params : Dir="{group}/graph/CAT/{name}"
-# 	threads: 1000
-# 	shell : """
-# 	CAT add_names -i {input.ORF2LCA} -o {output.annotation} -t {CAT_DB} --only_official
-# 	"""
-
 rule concatenate_annotation:
 	input: graph_annotation="{group}/graph/{name}_contiguous_ORF_annotation.tmp"
 	output: annotation="{group}/graph/{name}_contiguous_ORF_annotation.csv"

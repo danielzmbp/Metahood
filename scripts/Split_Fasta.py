@@ -18,7 +18,8 @@ def split_fasta(fasta_file,Temp_location,nb_chunks):
     Chunk_size = Total_length/float(nb_chunks)
 
     # rare long read issue
-    assert len(Sorted_Names)>=nb_chunks, "number of sequences is smaller than number of splits for prodigal, please change the parameter for number of splits for prodigal in the config, to less than %s"%len(Sorted_Names)
+    if len(Sorted_Names) < nb_chunks:
+        print("warning: number of sequences is smaller than number of splits")
 
     os.system("mkdir -p "+Temp_location)
 

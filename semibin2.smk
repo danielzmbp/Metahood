@@ -47,22 +47,6 @@ rule faster_semibin2:
     singularity: "docker://quay.io/biocontainers/semibin:2.1.0--pyhdfd78af_0"
     shell: "SemiBin2 single_easy_bin -i {input.contigs} -a {params.out}/semibin2_cov_* -o {params.out} -t {threads} --compression=none  && touch {output}"
 
-
-
-
-# rule semibin2:
-#     input: bams = semibin2_input,
-#            contigs = "{group}/contigs/contigs.fa"
-#     params: fold = "{group}/map",
-#             out = "{group}/binning/semibin2"
-#     output: "{group}/binning/semibin2/output/contig_bins.tsv"
-#     threads: 32
-#     resources:
-#         slurm_partition = get_resource("partition"),
-#         mem_mb = get_resource("mem")
-#     singularity: "docker://quay.io/biocontainers/semibin:2.1.0--pyhdfd78af_0"
-#     shell: "SemiBin2 single_easy_bin -i {input.contigs} -b {params.fold}/*_mapped_sorted.bam -o {params.out}/output -t {threads} --compression=none  && touch {output}"
-
 rule semibin2_post_processing:
     input: "{path}/semibin2/output/contig_bins.tsv"
     output:"{path}/semibin2/clustering_semibin2.csv"

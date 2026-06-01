@@ -64,41 +64,25 @@ rule bwa_index:
     shell:   "bwa index -b {params} {input} &> {log}"
 
 # ---- map reads to the assembly contigs--------------------------------------------------
-rule samtool_index:
-    input: "{path}.fa"
-    output: "{path}.fa.fai"
-    resources:
-        slurm_partition = get_resource("partition"),
-        mem_mb=get_resource("mem")    
-    singularity: "docker://quay.io/biocontainers/samtools:1.22.1--h96c455f_0"
-    shell: "samtools faidx {input}"
-
-
 rule bwa_mem:
     input:   index="{group}/contigs/index.done",
              contigs="{group}/contigs/contigs.fa",
-             asm_index = "{group}/contigs/contigs.fa.fai",
              shedule = schedule_mapping # makes read mapping happens with only 1 asm at a time
     params: left=lambda w:replace_extensions(SAMPLE_READS[w.sample][0],FILTER), # read in params to better control partition/mem
             right=lambda w:replace_extensions(SAMPLE_READS[w.sample][1],FILTER)
-    output:  pipe("{group}/map/{sample}.sam")
-    threads: 10
+    output:  temp("{group}/map/{sample}_mapped_sorted.bam")
+    threads: 14
     resources:
         slurm_partition = get_resource("partition", mult=10),
         mem_mb = get_resource("mem", mult=10),
     log:     "{group}/map/{sample}_map.log"
     message: "bwa mem mapping followed by samtool sorting for {input}"
-    singularity: "docker://quay.io/biocontainers/bwa:0.7.19--h577a1d6_1"
-    shell:   "bwa mem -t {threads} {input.contigs} {params.left} {params.right} 2>{log} > {output}"
-
-rule sam_to_bam:
-    input:   sam = "{group}/map/{sample}.sam",
-    output:  temp("{group}/map/{sample}_mapped_sorted.bam")
-    threads: 4
-    resources:
-        slurm_partition = get_resource("partition", mult=4),
-        mem_mb = get_resource("mem", mult=4),
-    message: "samtool sorting for {input}"
-    singularity: "docker://quay.io/biocontainers/samtools:1.22.1--h96c455f_0"
-    shell:   "samtools view -b -F 4 -@{threads} {input.sam} | samtools sort -@{threads} - > {output} "
-
+    singularity: "docker://quay.io/annacprice/bwasamtools:1.10"
+    shell:   """
+    samtools_threads=$(( {threads} > 4 ? 4 : 1 ))
+    bwa_threads=$(( {threads} - samtools_threads ))
+    if [ "$bwa_threads" -lt 1 ]; then bwa_threads=1; fi
+    bwa mem -t $bwa_threads {input.contigs} {params.left} {params.right} 2>{log} \
+        | samtools view -b -F 4 -@$samtools_threads - 2>>{log} \
+        | samtools sort -@$samtools_threads - > {output} 2>>{log}
+    """
