@@ -1,0 +1,2 @@
+Bootstrap: docker
+From: quay.io/biocontainers/fastp:0.23.4--h5f740d0_0

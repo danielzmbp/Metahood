@@ -1,5 +1,4 @@
-from scripts.common import detect_reads, fill_default_values, extended_glob, get_extension
-from os.path import basename
+from scripts.common import get_fastp_json
 
 # TODO : remove the need for {ext}, pretty sure it's un-needed and it makes it particularly complicated. 
 
@@ -61,74 +60,45 @@ rule bam_to_fastq:
         """
 
 
-# need to use a _done file, so that I can precise {ext}, since fastqc output name can't be precised.
-rule fastqc :
-    input :  "{path}/{sample}/{prefix}.{ext}"
-    output : "{path}/{sample}/{prefix}.{ext}_fastqc_done"
-    conda : CONDA_ENV + "/fastqc.yaml"
-    resources:
-        slurm_partition = get_resource("partition"),
-        mem_mb = get_resource("mem")
-    singularity : "docker://quay.io/annacprice/fastqc:0.11.9"
-    shell :"""
-            fastqc -Xmx{resources.mem_mb}m -o {wildcards.path}/{wildcards.sample} {input}
-            touch {output}
-           """
-
 if FILTER:
-    rule trim_galore :
+    rule fastp :
         input : file_R1="{path}/{sample}/Filtered_{prefix}R1{suffix}.{ext}",
-                file_R1_qc="{path}/{sample}/Filtered_{prefix}R1{suffix}.{ext}_fastqc_done",
-                file_R2="{path}/{sample}/Filtered_{prefix}R2{suffix}.{ext}",
-                file_R2_qc="{path}/{sample}/Filtered_{prefix}R2{suffix}.{ext}_fastqc_done"
+                file_R2="{path}/{sample}/Filtered_{prefix}R2{suffix}.{ext}"
         output :R1="{path}/{sample}/Filtered_{prefix}R1{suffix}_trimmed.{ext}",
                 R2="{path}/{sample}/Filtered_{prefix}R2{suffix}_trimmed.{ext}",
-                report_R1="{path}/{sample}/Filtered_{prefix}R1{suffix}.{ext}_trimming_report.txt",
-                report_R2="{path}/{sample}/Filtered_{prefix}R2{suffix}.{ext}_trimming_report.txt"
-        params : R1 = lambda w: "%s/%s/Filtered_%sR1%s_val_1.fq"%(w.path,w.sample,w.prefix,w.suffix)+".gz"*(".gz" in w.ext),
-                 R2 = lambda w: "%s/%s/Filtered_%sR2%s_val_2.fq"%(w.path,w.sample,w.prefix,w.suffix)+".gz"*(".gz" in w.ext),
-                 option = lambda w:"--gzip"*("gz" in w['ext']),
+                json="{path}/{sample}/Filtered_{prefix}{suffix}.{ext}_fastp.json",
+                html="{path}/{sample}/Filtered_{prefix}{suffix}.{ext}_fastp.html"
         log :   "{path}/{sample}/{prefix}.{suffix}.{ext}.log"
-        conda : CONDA_ENV + "/trim_galore.yaml"
+        conda : CONDA_ENV + "/fastp.yaml"
         threads: 8
         resources:
             slurm_partition = get_resource("partition"),
             mem_mb = get_resource("mem")
-        singularity : "docker://quay.io/annacprice/trimgalore:0.6.5"
+        singularity : "docker://quay.io/biocontainers/fastp:0.23.4--h5f740d0_0"
         shell : """
-        trim_galore -j {threads} --fastqc {params.option} -o $(dirname {output.R1}) --paired {input.file_R1} {input.file_R2} > {log} 2>&1
-        mv {params.R1} {output.R1}
-        mv {params.R2} {output.R2}
+        fastp -w {threads} -i {input.file_R1} -I {input.file_R2} -o {output.R1} -O {output.R2} -j {output.json} -h {output.html} > {log} 2>&1
         """
 else:
-    rule trim_galore :
+    rule fastp :
         input : file_R1="{path}/{sample}/{prefix}R1{suffix}.{ext}",
-                file_R1_qc="{path}/{sample}/{prefix}R1{suffix}.{ext}_fastqc_done",
-                file_R2="{path}/{sample}/{prefix}R2{suffix}.{ext}",
-                file_R2_qc="{path}/{sample}/{prefix}R2{suffix}.{ext}_fastqc_done"
+                file_R2="{path}/{sample}/{prefix}R2{suffix}.{ext}"
         output :R1="{path}/{sample}/{prefix}R1{suffix}_trimmed.{ext}",
                 R2="{path}/{sample}/{prefix}R2{suffix}_trimmed.{ext}",
-                report_R1="{path}/{sample}/{prefix}R1{suffix}.{ext}_trimming_report.txt",
-                report_R2="{path}/{sample}/{prefix}R2{suffix}.{ext}_trimming_report.txt"
-        params : R1 = lambda w: "%s/%s/%sR1%s_val_1.fq"%(w.path,w.sample,w.prefix,w.suffix)+".gz"*(".gz" in w.ext),
-                 R2 = lambda w: "%s/%s/%sR2%s_val_2.fq"%(w.path,w.sample,w.prefix,w.suffix)+".gz"*(".gz" in w.ext),
-                 option = lambda w:"--gzip"*("gz" in w['ext']),
+                json="{path}/{sample}/{prefix}{suffix}.{ext}_fastp.json",
+                html="{path}/{sample}/{prefix}{suffix}.{ext}_fastp.html"
         log :   "{path}/{sample}/{prefix}.{suffix}.{ext}.log"
-        conda : CONDA_ENV + "/trim_galore.yaml"
+        conda : CONDA_ENV + "/fastp.yaml"
         threads: 8
         resources:
             slurm_partition = get_resource("partition"),
             mem_mb = get_resource("mem")
-        singularity : "docker://quay.io/annacprice/trimgalore:0.6.5"
+        singularity : "docker://quay.io/biocontainers/fastp:0.23.4--h5f740d0_0"
         shell :"""
-        trim_galore -j {threads} --fastqc {params.option} -o $(dirname {output.R1}) --paired {input.file_R1} {input.file_R2} > {log} 2>&1
-        mv {params.R1} {output.R1}
-        mv {params.R2} {output.R2}
+        fastp -w {threads} -i {input.file_R1} -I {input.file_R2} -o {output.R1} -O {output.R2} -j {output.json} -h {output.html} > {log} 2>&1
         """    
 
 rule multiqc :
-    input : R1=[replace_extensions(SAMPLE_READS[sample][0],FILTER) for sample in SAMPLES],
-            R2=[replace_extensions(SAMPLE_READS[sample][1],FILTER) for sample in SAMPLES],
+    input : json=[get_fastp_json(SAMPLE_READS[sample][0], FILTER) for sample in SAMPLES],
     output : expand("{path}/quality_done",path=IN)
     conda : CONDA_ENV + "/multiqc.yaml"
     resources:
@@ -138,21 +108,3 @@ rule multiqc :
     shell : """multiqc --interactive -f {IN}/ -o {IN}/
     touch {output}
     """
-
-
-if IS_FASTA :
-    rule reads_qty_0:
-        input:  R1=lambda w:R1[w["sample"]]
-        output: "{path}/{sample}/{sample}_readsnb.txt"
-        shell: "echo $(( $(zgrep -c '>' {input.R1})*2 )) > {output}"
-else : 
-    rule reads_qty_0:
-        input:  R1=lambda w:R1[w["sample"]]
-        output: "{path}/{sample}/{sample}_readsnb.txt"
-        shell: "echo $(($(zcat {input.R1} | wc -l)/2)) > {output}"
-
-rule read_nb_0:
-    input: total= [f"{path}/{sample}/{sample}_readsnb.txt" for sample,path in  SAMPLE_PATH.items()]
-    output: expand("{path}/.read_nb.done",path=IN)
-    shell: "touch {output}"
-

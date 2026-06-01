@@ -1,6 +1,6 @@
 #!/bin/bash
 
-container_list=("pythonenv" "bandage" "bedtools" "blast" "bwasamtools" "cat" "concoct" "desman" "diamond" "drep" "fastqc" "fasttree" "gtdbtk" "ip" "kofamscan" "krakenuniq" "mafft" "megahit" "metabat2" "multiqc" "prodigal" "trimal" "trim_galore")
+container_list=("pythonenv" "bandage" "bedtools" "blast" "bwasamtools" "cat" "concoct" "desman" "diamond" "drep" "fastp" "fasttree" "gtdbtk" "ip" "kofamscan" "krakenuniq" "mafft" "megahit" "metabat2" "multiqc" "prodigal" "trimal")
 
 mkdir -p builds
 

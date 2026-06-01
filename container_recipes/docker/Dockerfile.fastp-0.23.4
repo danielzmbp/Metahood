@@ -1,0 +1,10 @@
+FROM ubuntu:20.04
+
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget http://opengene.org/fastp/fastp.0.23.4 && \
+    mv fastp.0.23.4 fastp && \
+    chmod a+x fastp && \
+    mv fastp /usr/local/bin/ && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
