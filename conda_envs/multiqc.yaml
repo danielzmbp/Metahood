@@ -2,4 +2,6 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
+  - python=3.10
+  - setuptools<81
   - multiqc==1.9
