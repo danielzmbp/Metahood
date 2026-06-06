@@ -2,6 +2,7 @@
 threads : 8 # single task nb threads
 task_memory: 200 # nb of Go of Ram you expect bedtool and rpsblast to take
 Percent_memory: 0.5 # maximum quantity of memory the snakemake can take
+nb_concurrent_map: 4 # number of assembly groups allowed to run read mapping at once
 # ------ Output folder ------
 execution_directory: ~/path/to/output/folder/ # path to output folder,   
 # ------ Path to data folder ------ 

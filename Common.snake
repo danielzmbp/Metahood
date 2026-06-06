@@ -50,7 +50,7 @@ CONDA_ENV = config["conda_env"]
 CONFIG_PATH = config["CONFIG_PATH"]
 LOCAL_DIR = config["LOCAL_DIR"]
 EXEC_DIR = config["EXEC_DIR"]
-NB_CONCURENT_MAP = config["nb_concurent_map"]
+NB_CONCURRENT_MAP = config["nb_concurrent_map"]
 
 # ------- Cluster resources -------
 # config should be in G, but this will be compared with info in mb
@@ -250,7 +250,7 @@ GROUP_BAM_DONE = {group:os.path.isfile(f"{EXEC_DIR}/{group}/map/.bam_map.done") 
 # help to predict which assembly migth be done first: issue with dealing with 1 assembly at a time is that we don't know beforehand which one is going to be finished first.
 ASM_ORDER = sorted(GROUPS,key=lambda x:(-GROUP_BAM_DONE[x],-GROUP_ASM_DONE[x],GROUP_SIZE[x]))
 # 
-BATCH_ASM = [ASM_ORDER[batch:batch+NB_CONCURENT_MAP] for batch in range(0,len(ASM_ORDER),NB_CONCURENT_MAP)]
+BATCH_ASM = [ASM_ORDER[batch:batch+NB_CONCURRENT_MAP] for batch in range(0,len(ASM_ORDER),NB_CONCURRENT_MAP)]
 
 BATCH_ASM_TO_PREV = {asm:[f"{group}/map/.bam_map.done" for group in groups] for index,groups in enumerate(BATCH_ASM[:-1]) for asm in BATCH_ASM[index+1]}
 BATCH_ASM_TO_PREV.update({asm:f"{asm}/contigs/contigs.fa" for asm in BATCH_ASM[0]})
@@ -275,5 +275,4 @@ def get_percent_megahit(group,threads):
     
     partition, min_memory, max_memory, min_threads ,max_threads = next(el for el in SLURM_PARTITIONS if el[0]==partition)
     return mem/max_memory
-
 

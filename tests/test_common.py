@@ -20,6 +20,13 @@ class CommonHelperTests(unittest.TestCase):
 
         self.assertFalse(common.has_slurm_partitions(config))
         self.assertEqual(common.get_slurm_partitions(config), [["", 0, 0, 0, 0]])
+        self.assertEqual(config["nb_concurrent_map"], 4)
+
+    def test_legacy_misspelled_map_key_is_supported(self):
+        config = {"nb_concurent_map": 2}
+        common.fill_default_values(config)
+
+        self.assertEqual(config["nb_concurrent_map"], 2)
 
     def test_named_slurm_partition_is_parsed(self):
         config = {

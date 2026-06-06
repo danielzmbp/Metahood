@@ -18,7 +18,7 @@ import os
 
 default_values = {
     "IGNORE_FOLDER":["multiqc_data"],
-    "nb_concurent_map":1,
+    "nb_concurrent_map":4,
     "binning":{"concoct":{"contig_size" : 1000,"execution" : 1,"max_bin_nb" : 2000},"metabat2":{"execution" : 1,"contig_size":1500},"ssa_unique_sample":False,"cobinning_samples":["*"]},
     "mag":["native"],
     "threads":8,
@@ -57,6 +57,9 @@ def setdefault_recursively(tgt, default = default_values):
             tgt.setdefault(k, default[k])
 
 def fill_default_values(config):
+    # Keep accepting the old misspelled key for existing configs.
+    if "nb_concurrent_map" not in config and "nb_concurent_map" in config:
+        config["nb_concurrent_map"] = config["nb_concurent_map"]
     local_dir = config.get("LOCAL_DIR")
     if local_dir:
         default_values["scripts"] = os.path.join(local_dir, "scripts")
