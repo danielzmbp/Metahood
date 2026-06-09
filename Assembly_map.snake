@@ -37,8 +37,7 @@ rule megahit:
     conda : CONDA_ENV + "/megahit.yaml"
     singularity : "docker://quay.io/annacprice/megahit:1.2.9"
     shell:   """
-             phymem=$(awk '/MemTotal/{{print $2}}' /proc/meminfo)
-             mem=$(awk -v x={resources.mem_mb} -v y=$phymem 'BEGIN {{print (x * 1024) / y}}')
+             mem=$(( {resources.mem_mb} * 1048576 ))
              megahit -1 {params.left} -2 {params.right} {params.Additional_params} -t {threads} -m $mem --continue -o {params.fold} -f &> {log}
              rm -rf {params.fold}/intermediate_contigs
              """
