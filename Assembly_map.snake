@@ -70,7 +70,7 @@ rule bwa_mem:
     params: left=lambda w:replace_extensions(SAMPLE_READS[w.sample][0],FILTER), # read in params to better control partition/mem
             right=lambda w:replace_extensions(SAMPLE_READS[w.sample][1],FILTER)
     output:  temp("{group}/map/{sample}_mapped_sorted.bam")
-    threads: 14
+    threads: 16
     resources:
         slurm_partition = get_resource("partition", mult=10),
         mem_mb = get_resource("mem", mult=10),
