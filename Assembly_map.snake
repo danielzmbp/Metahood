@@ -30,8 +30,8 @@ rule megahit:
              Additional_params = ASSEMBLER_PARAMS,
     threads: 32
     resources:
-        slurm_partition = get_resource("partition",mult=5),
-        mem_mb = get_resource("mem",mult=5),
+        slurm_partition = get_resource("partition",mult=8,min_size=8192),
+        mem_mb = get_resource("mem",mult=8,min_size=8192),
         # exclude = "n80546,n83030,n83032"
     log:     "{group}/assembly/assembly.log"
     conda : CONDA_ENV + "/megahit.yaml"

@@ -59,6 +59,22 @@ class CommonHelperTests(unittest.TestCase):
             4,
         )
 
+    def test_megahit_style_resource_scaling_uses_base2_floor(self):
+        partitions = [["ei-compute", 1000, 600000, 1, 64]]
+
+        self.assertEqual(
+            common.get_resource_real(None, SimpleNamespace(size=0), 32, 1, SLURM_PARTITIONS=partitions, mode="mem", mult=8, min_size=8192),
+            65536,
+        )
+        self.assertEqual(
+            common.get_resource_real(None, SimpleNamespace(size=20_000_000_000), 32, 1, SLURM_PARTITIONS=partitions, mode="mem", mult=8, min_size=8192),
+            160000,
+        )
+        self.assertEqual(
+            common.get_resource_real(None, SimpleNamespace(size=100_000_000_000), 32, 1, SLURM_PARTITIONS=partitions, mode="mem", mult=8, min_size=8192),
+            600000,
+        )
+
     def test_replace_extensions_tracks_filter_and_fastq_trimming(self):
         read = "/data/Sample/Sample_R1.fastq.gz"
 
