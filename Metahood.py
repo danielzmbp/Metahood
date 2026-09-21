@@ -77,6 +77,8 @@ if args.s :
         additional_params+= ['--conda-prefix','%s/conda_envs'%METAHOOD_DIR]
     if ("--use-singularity" in additional_params)&IS_WRITABLE and not any(p.startswith("--singularity-prefix") for p in additional_params):
         additional_params+= ['--singularity-prefix','%s/.singularity'%METAHOOD_DIR]
+    if ("--use-singularity" in additional_params) and not any(p.startswith("--singularity-args") for p in additional_params):
+        additional_params+= ['--singularity-args', '-B /home']
     base_params.extend(additional_params)
 
 # ------- call snakemake from  METAHOOD_DIR -----------
