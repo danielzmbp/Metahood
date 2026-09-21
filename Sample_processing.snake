@@ -71,7 +71,7 @@ rule fastqc :
         mem_mb = get_resource("mem")
     singularity : "docker://quay.io/annacprice/fastqc:0.11.9"
     shell :"""
-            fastqc -Xmx{resources.mem_mb}m -o {wildcards.path}/{wildcards.sample} {input}
+            _JAVA_OPTIONS="-Xmx{resources.mem_mb}m" fastqc -o {wildcards.path}/{wildcards.sample} {input}
             touch {output}
            """
 
