@@ -152,7 +152,7 @@ def get_resource_real(wildcards, input, threads, attempt, SLURM_PARTITIONS="", m
     mem = max((input.size//1000000) * attempt * mult, attempt*min_size* mult) # this is mb
 
     # handle case where we are not on a cluster, no partition is defined
-    if SLURM_PARTITIONS[0][0]=="":
+    if not SLURM_PARTITIONS or SLURM_PARTITIONS[0][0]=="":
         partition = ""
         return return_result(mem,partition,threads,mode)
 

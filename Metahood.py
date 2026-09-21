@@ -53,8 +53,9 @@ NB_MAP = config["nb_map"]
 
 
 # ------- base parameters used to call snakemake -----------
-base_params = ["snakemake", "--directory", EXEC_DIR,"-k", "--config", "LOCAL_DIR=%s"%METAHOOD_DIR,"CONFIG_PATH=%s"%CONFIG_FILE,"EXEC_DIR=%s"%EXEC_DIR,"--configfile="+CONFIG_FILE,"--resources",'memG=%s'%MEMG,'nb_map=%s'%NB_MAP, "--latency-wait", "120"]
-if "" not in config["slurm_partitions"]:
+snakemake_bin = shutil.which("snakemake") or os.path.join(sys.prefix, "bin", "snakemake") or "snakemake"
+base_params = [snakemake_bin, "--directory", EXEC_DIR,"-k", "--config", "LOCAL_DIR=%s"%METAHOOD_DIR,"CONFIG_PATH=%s"%CONFIG_FILE,"EXEC_DIR=%s"%EXEC_DIR,"--configfile="+CONFIG_FILE,"--resources",'memG=%s'%MEMG,'nb_map=%s'%NB_MAP, "--latency-wait", "120"]
+if args.cores:
     base_params+=["--cores", str(args.cores)]
 
 
@@ -74,6 +75,8 @@ if args.s :
     additional_params=args.s
     if ("--use-conda" in additional_params)&IS_WRITABLE:
         additional_params+= ['--conda-prefix','%s/conda_envs'%METAHOOD_DIR]
+    if ("--use-singularity" in additional_params)&IS_WRITABLE and not any(p.startswith("--singularity-prefix") for p in additional_params):
+        additional_params+= ['--singularity-prefix','%s/.singularity'%METAHOOD_DIR]
     base_params.extend(additional_params)
 
 # ------- call snakemake from  METAHOOD_DIR -----------

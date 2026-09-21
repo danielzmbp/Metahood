@@ -65,7 +65,7 @@ SLURM_PARTITIONS = [[specs["name"],1000*int(specs["min_mem"]),1000*int(specs["ma
 
 # megahit wants a percent of max mem, so there is a need for calculations
 MAX_MEM_PERCENT = {"":config["Percent_memory"]}
-if SLURM_PARTITIONS[0][0]:
+if SLURM_PARTITIONS and SLURM_PARTITIONS[0][0]:
     for name,_,max_mem,_,_ in SLURM_PARTITIONS:
         MAX_MEM_PERCENT[name] = max_mem 
 
@@ -306,6 +306,8 @@ def get_percent_megahit(group,threads):
     mem = get_resource_real("", input_size, threads, 1,SLURM_PARTITIONS=SLURM_PARTITIONS,mode="mem",mult=2,min_size=10000)
     partition = get_resource_real("", input_size, threads, 1,SLURM_PARTITIONS=SLURM_PARTITIONS,mode="partition", mult=2,min_size=10000)
     
+    if not SLURM_PARTITIONS:
+        return config["Percent_memory"]
     partition, min_memory, max_memory, min_threads ,max_threads = next(el for el in SLURM_PARTITIONS if el[0]==partition)
     return mem/max_memory
 
