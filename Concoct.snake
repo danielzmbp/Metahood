@@ -207,6 +207,8 @@ rule get_consensus_binning2 :
     # only support 2 binner as of now
     input : unpack(consensus_inputs)
     output : "{group}/binning/{binner_combi}/clustering_consensus.csv"
+    conda : CONDA_ENV + "/pythonenv.yaml"
+    singularity : "docker://quay.io/annacprice/pythonenv:3.9"
     resources:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem")

@@ -152,16 +152,16 @@ def consensus(cluster_def_m2, cluster_def_c, profile_file, contig_to_len, contig
             len1 = sum([contig_to_len[contig] for contig in cluster_to_contigs[mag1]])
             len2 = sum([contig_to_len[contig] for contig in cluster_to_contigs[mag2]])
             # by default if they have the same length, mag1 will be chosen
-            return [mag1,mag2][len1<len2]
+            return [mag1,mag2][int(len1<len2)]
         else :
-            return [mag1,mag2][score1<score2]
+            return [mag1,mag2][int(score1<score2)]
     # get the list of mag to ignore :
     non_binary_relationship_mags = set(itertools.chain(*non_binary_relationship))
     for mag1,mag2 in smags:
         if not {mag1,mag2}&non_binary_relationship_mags:
             best_mag = get_best_mag(mag1, mag2, sorted_mags, mags_to_delete, contig_to_len, cluster_to_contigs)
             # delete the one which is not the best.... next time let's make it even more convoluted 
-            mags_to_delete|={[mag1,mag2][mag1==best_mag]}
+            mags_to_delete|={[mag1,mag2][int(mag1==best_mag)]}
 
     # deal with non binary relationship: remove the worst of the serie, and then again....
     smags_remaining = lambda mtd:{el for el in smags if not mtd&set(el)}
@@ -184,6 +184,9 @@ def consensus(cluster_def_m2, cluster_def_c, profile_file, contig_to_len, contig
     assert(sum([len(el)==1 for el in cluster_def_final.values()])==len(cluster_def_final)),"some contigs are still ambiguous"
 
     # output the cluster definition in the same format as input : 
+    outdir = dirname(output)
+    if outdir:
+        os.makedirs(outdir, exist_ok=True)
     with open(output,'w') as handle : 
         handle.write("contig_id,0\n")
         handle.writelines("%s,%s\n"%(contig,mag[0]) for contig,mag in cluster_def_final.items())
