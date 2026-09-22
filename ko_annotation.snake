@@ -23,10 +23,13 @@ KO_HMM_CUTOFFS = config["KO_HMM_CUTOFFS"]
 SCRIPTS = config["scripts"]
 CONFIG_PATH = config["CONFIG_PATH"]
 config2 = yaml.full_load(open(CONFIG_PATH))
+fill_default_values(config2)
 
 # ------- Cluster resources -------
 # config should be in G, but this will be compared with info in mb
-SLURM_PARTITIONS = [[specs["name"],1000*int(specs["min_mem"]),1000*int(specs["max_mem"]),int(specs["min_threads"]),int(specs["max_threads"])] for _,specs in config2["slurm_partitions"].items() if _]
+SLURM_PARTITIONS = [[specs["name"],1000*int(specs["min_mem"]),1000*int(specs["max_mem"]),int(specs["min_threads"]),int(specs["max_threads"])] for _,specs in config2.get("slurm_partitions", {}).items() if _ and specs.get("name")]
+if not SLURM_PARTITIONS:
+    SLURM_PARTITIONS = [["", 0, 0, 0, 0]]
 
 # need to create a partial function because rules takes a function
 def get_resource(mode, **kwargs):

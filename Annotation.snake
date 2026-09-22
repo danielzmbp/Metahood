@@ -68,7 +68,7 @@ rule koannotation:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem")
     shell: """
-    snakemake -s {LOCAL_DIR}/ko_annotation.snake -k --rerun-incomplete --directory {params.root} --cores {threads} --nolock --config scripts={SCRIPTS} ROOT={params.root} KO_HMM={KO_HMM} KO_HMM_CUTOFFS={KO_HMM_CUTOFFS} CONFIG_PATH={CONFIG_PATH}
+    snakemake -s {LOCAL_DIR}/ko_annotation.snake -k --rerun-incomplete --directory {params.root} --cores {threads} --nolock --use-singularity --singularity-args "-B /home" --singularity-prefix {LOCAL_DIR}/.singularity --config scripts={SCRIPTS} ROOT={params.root} KO_HMM={KO_HMM} KO_HMM_CUTOFFS={KO_HMM_CUTOFFS} CONFIG_PATH={CONFIG_PATH}
     rm -rf {params.root}/.snakemake
     """
 
