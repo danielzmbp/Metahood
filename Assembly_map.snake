@@ -28,7 +28,7 @@ rule megahit:
              right=lambda w: ",".join(R2[w["group"]]),
              fold ="{group}/assembly",
              Additional_params = ASSEMBLER_PARAMS,
-    threads: 32
+    threads: 20
     resources:
         slurm_partition = get_resource("partition",mult=5),
         mem_mb = get_resource("mem",mult=5),

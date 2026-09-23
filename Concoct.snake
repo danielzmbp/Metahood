@@ -242,7 +242,7 @@ rule checkm_analyse:
     params : folder = "{group}/binning/{binner}/quality/{type}",
              tmp = "{group}/binning/{binner}/quality/{type}/tmp",
              hmm = lambda w:HMM[w.type]
-    threads: 32
+    threads: 20
     conda : "%s/checkm.yaml"%CONDA_ENV
     singularity : "docker://quay.io/annacprice/gtdbtk:1.4.0"
     resources:
@@ -260,7 +260,7 @@ rule checkm_quality_assessment :
     params : folder = "{group}/binning/{binner}/quality/{type}",
              tmp = "{group}/binning/{binner}/quality/{type}/tmp",
              hmm = lambda w:HMM[w.type]
-    threads: 32
+    threads: 20
     resources:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem")

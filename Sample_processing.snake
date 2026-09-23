@@ -44,7 +44,7 @@ rule bam_to_fastq:
     input: "{path}/{sample}/Filtered.bam"
     output: R1 = temp("{path}/{sample}/Filtered_{prefix}R1{suffix}.{ext}"),
             R2 = temp("{path}/{sample}/Filtered_{prefix}R2{suffix}.{ext}")
-    threads: 10
+    threads: 1
     resources:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem")
