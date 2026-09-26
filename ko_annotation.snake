@@ -45,7 +45,7 @@ rule results:
 rule koannotation:
     input: "{path}.faa"
     output: temp("{path}_ko.out")
-    threads: 5
+    threads: 1
     resources:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem"),

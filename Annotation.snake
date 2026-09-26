@@ -14,7 +14,7 @@ rule prodigal:
         cut_fa=expand("{{group}}/annotation/temp_splits/Batch_{nb}",nb=range(100))
     params:
         dir='{group}/annotation'
-    threads: 32
+    threads: 20
     resources:
         slurm_partition = get_resource("partition",mult=10),
         mem_mb = get_resource("mem",mult=10)
@@ -63,7 +63,7 @@ rule koannotation:
     output : out = "{path}/contigs_KEGG_best_hits.tsv"
     params: root = realpath("{path}")
     conda: "%s/ko_annotation.yaml"%CONDA_ENV
-    threads: 32
+    threads: 30
     resources:
         slurm_partition = get_resource("partition"),
         mem_mb = get_resource("mem")
