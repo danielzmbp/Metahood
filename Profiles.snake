@@ -195,19 +195,14 @@ rule get_percent:
     input: mapped=lambda w:[w.group+"/map/"+sample.split('/')[-1]+"_mapped_read.txt" for sample in  COBINNING_SAMPLES[w.group]],
            total=lambda w:[SAMPLE_PATH[sample]+"/"+sample.split('/')[-1]+"/"+sample.split('/')[-1]+"_readsnb.txt" for sample in  COBINNING_SAMPLES[w.group]]
     output:  "{group}/profile/mapping_percent.tsv"
-    conda : CONDA_ENV + "/pythonenv.yaml"
-    singularity : "docker://quay.io/annacprice/pythonenv:3.9"
-    shell: """
-            for path in {input.mapped}
-            do
-                file=$(basename $path)
-                sample=${{file%_mapped_read.txt}}
-                tot_reads=$(cat {IN}/$sample/$sample"_readsnb.txt")
-                mapped_reads=$(cat $path)
-                echo $tot_reads $mapped_reads
-                echo -e $sample\t$(bc -l <<< "$mapped_reads / $tot_reads")>>{output}
-            done
-           """
+    run:
+        with open(output[0], "w") as out:
+            for map_file, tot_file in zip(input.mapped, input.total):
+                sample = basename(map_file).replace("_mapped_read.txt", "")
+                mapped_reads = float(open(map_file).read().strip())
+                tot_reads = float(open(tot_file).read().strip())
+                ratio = mapped_reads / tot_reads if tot_reads > 0 else 0.0
+                out.write(f"{sample}\t{ratio}\n")
 
 
 # ---- mags infos  ----------------------
