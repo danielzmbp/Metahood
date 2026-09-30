@@ -40,7 +40,7 @@ rule faster_semibin2:
            contigs = "{group}/contigs/contigs.fa"
     output: "{group}/binning/semibin2/output/contig_bins.tsv"
     params: out = "{group}/binning/semibin2/output",
-    threads: 32
+    threads: 20
     resources:
         slurm_partition = get_resource("partition",mult=4),
         mem_mb = get_resource("mem",mult=4)
