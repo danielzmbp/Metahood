@@ -35,33 +35,26 @@ rule semibin_cov_reformat:
                     sline = line.rstrip().split("\t")
                     handle_w.write("%s\n"%"\t".join(sline[-2:]))
 
-rule faster_semibin2:
-    input: cov = "{group}/binning/semibin2/output/cov.done",
-           contigs = "{group}/contigs/contigs.fa"
-    output: "{group}/binning/semibin2/output/contig_bins.tsv"
-    params: out = "{group}/binning/semibin2/output",
+rule semibin2:
+    input:
+        bams = lambda w: [f"{w.group}/map/{sample}_mapped_sorted.bam" for sample in COBINNING_SAMPLES[w.group]],
+        contigs = "{group}/contigs/contigs.fa",
+        faa = "{group}/annotation/contigs.faa"
+    output:
+        "{group}/binning/semibin2/output/contig_bins.tsv"
+    params:
+        out = "{group}/binning/semibin2/output"
     threads: 20
     resources:
-        slurm_partition = get_resource("partition",mult=4),
-        mem_mb = get_resource("mem",mult=4)
+        slurm_partition = get_resource("partition", mult=4),
+        mem_mb = get_resource("mem", mult=4)
     singularity: "docker://quay.io/biocontainers/semibin:2.1.0--pyhdfd78af_0"
-    shell: "SemiBin2 single_easy_bin -i {input.contigs} -a {params.out}/semibin2_cov_* -o {params.out} -t {threads} --compression=none  && touch {output}"
-
-
-
-
-# rule semibin2:
-#     input: bams = semibin2_input,
-#            contigs = "{group}/contigs/contigs.fa"
-#     params: fold = "{group}/map",
-#             out = "{group}/binning/semibin2"
-#     output: "{group}/binning/semibin2/output/contig_bins.tsv"
-#     threads: 32
-#     resources:
-#         slurm_partition = get_resource("partition"),
-#         mem_mb = get_resource("mem")
-#     singularity: "docker://quay.io/biocontainers/semibin:2.1.0--pyhdfd78af_0"
-#     shell: "SemiBin2 single_easy_bin -i {input.contigs} -b {params.fold}/*_mapped_sorted.bam -o {params.out}/output -t {threads} --compression=none  && touch {output}"
+    shell: """
+        SemiBin2 single_easy_bin -i {input.contigs} -b {input.bams} \
+            --self-supervised --prodigal-output-faa {input.faa} \
+            -o {params.out} -t {threads} --compression=none \
+            && touch {output}
+    """
 
 rule semibin2_post_processing:
     input: "{path}/semibin2/output/contig_bins.tsv"

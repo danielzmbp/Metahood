@@ -94,7 +94,7 @@ def bam_dependant_output(wc):
     # generate_depth metabat
     OUT += [f"{group}/map/depth.txt"]
 
-    CASES = ["contigs","orf"]+ ("concoct" in BINNER)*["contigs_C10K"] + ("semibin2" in BINNER)*["split_semibin2"]
+    CASES = ["contigs","orf"]+ ("concoct" in BINNER)*["contigs_C10K"]
     for sample in COBINNING_SAMPLES[group]:
         for case in CASES:
             # bedtools (include: concoct/semibin2/orfs)
